@@ -1,9 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',  // ← tambahkan ini
+  output: 'export',  
   reactStrictMode: true,
   images: {
-    unoptimized: true,  // ← wajib untuk static export
+    unoptimized: true, 
     domains: ['ui-avatars.com', 'logo.clearbit.com'],
   },
 }

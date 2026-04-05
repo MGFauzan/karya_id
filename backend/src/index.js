@@ -1,5 +1,4 @@
 'use strict'
-
 require('dotenv').config()
 const express    = require('express')
 const cors       = require('cors')
@@ -7,9 +6,7 @@ const helmet     = require('helmet')
 const morgan     = require('morgan')
 const compression = require('compression')
 const rateLimit  = require('express-rate-limit')
-
 const { errorHandler, notFound } = require('./middleware/error')
-
 const authRoutes            = require('./routes/auth')
 const usersRoutes           = require('./routes/users')
 const jobsRoutes            = require('./routes/jobs')
@@ -23,8 +20,15 @@ app.use(helmet())
 app.use(compression())
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
 
+const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000']
 app.use(cors({
-  origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
+  origin: function(origin, callback) {
+    if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
   credentials: true,
 }))
 

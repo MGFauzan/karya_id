@@ -2,4 +2,4 @@
 buildCommand = "cd backend && npm install && npx prisma generate"
 
 [deploy]
-startCommand = "npx prisma migrate deploy --schema=backend/prisma/schema.prisma && node backend/src/index.js"
+startCommand = "npx prisma db push --schema=backend/prisma/schema.prisma && node backend/prisma/seed.js && node backend/src/index.js"

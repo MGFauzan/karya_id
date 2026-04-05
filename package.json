@@ -1,0 +1,11 @@
+{
+  "name": "karyaid",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd backend && npm install",
+    "start": "node backend/src/index.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

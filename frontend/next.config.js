@@ -3,7 +3,7 @@ const nextConfig = {
   output: 'export',  
   reactStrictMode: true,
   images: {
-    unoptimized: true, 
+    unoptimized: true, //
     domains: ['ui-avatars.com', 'logo.clearbit.com'],
   },
 }

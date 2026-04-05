@@ -1,0 +1,290 @@
+// KARYA.ID — Prisma Schema
+// Platform Ekosistem Kerja Inklusif Berbasis AI
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  USER
+  COMPANY
+  ADMIN
+}
+
+enum Segment {
+  SMK       // Lulusan SMK
+  TKI       // Tenaga Kerja Indonesia
+  PETANI    // Petani Muda
+  DIFABEL   // Penyandang Disabilitas
+  UMUM      // Umum
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  FREELANCE
+  APPRENTICESHIP
+  INTERNSHIP
+}
+
+enum JobStatus {
+  OPEN
+  CLOSED
+  DRAFT
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWED
+  SHORTLISTED
+  INTERVIEW
+  HIRED
+  REJECTED
+}
+
+enum EducationLevel {
+  SD
+  SMP
+  SMK
+  SMA
+  D3
+  S1
+  S2
+  S3
+}
+
+// ─── MODELS ──────────────────────────────────────────────────────────────────
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String
+  name        String
+  role        Role     @default(USER)
+  segment     Segment  @default(UMUM)
+  isVerified  Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  profile         UserProfile?
+  applications    Application[]
+  company         Company?
+  recommendations Recommendation[]
+
+  @@map("users")
+}
+
+model UserProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Personal Info
+  phone     String?
+  bio       String?
+  avatar    String?
+  birthDate DateTime?
+  gender    String?
+
+  // Location
+  province String?
+  city     String?
+  district String?
+  latitude Float?
+  longitude Float?
+
+  // Education
+  educationLevel  EducationLevel?
+  school          String?
+  major           String?
+  graduationYear  Int?
+
+  // Work
+  yearsExperience Int     @default(0)
+  currentJob      String?
+  expectedSalary  Int?
+
+  // Skills & Metadata (JSON arrays)
+  skills         String[] @default([])
+  certifications String[] @default([])
+  languages      String[] @default([])
+  preferredJob   String[] @default([])
+
+  // Segment-specific fields
+  smkJurusan      String? // SMK segment
+  tikiDestination String? // TKI segment
+  petaniCommodity String? // PETANI segment
+  difabelType     String? // DIFABEL segment
+
+  // AI embedding (stored as JSON)
+  embeddingVector Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_profiles")
+}
+
+model Company {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  logo        String?
+  description String?
+  industry    String?
+  size        String? // "1-50", "51-200", "200+"
+  website     String?
+
+  // Location
+  province String?
+  city     String?
+  address  String?
+  latitude Float?
+  longitude Float?
+
+  // Inclusive Employer
+  isInclusiveEmployer Boolean @default(false)
+  difabelQuota        Int     @default(0)
+
+  isVerified Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  jobs Job[]
+
+  @@map("companies")
+}
+
+model Job {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String
+  requirements String[] @default([])
+  benefits     String[] @default([])
+
+  // Job Details
+  type     JobType   @default(FULL_TIME)
+  status   JobStatus @default(OPEN)
+  category String?
+
+  // Compensation
+  salaryMin Int?
+  salaryMax Int?
+
+  // Location
+  province String?
+  city     String?
+  isRemote Boolean @default(false)
+  latitude Float?
+  longitude Float?
+
+  // Targeting
+  requiredSkills     String[]        @default([])
+  preferredSegments  Segment[]       @default([])
+  educationMin       EducationLevel?
+  experienceMin      Int             @default(0)
+
+  // Inclusive Hiring
+  openForDifabel Boolean  @default(false)
+  difabelTypes   String[] @default([])
+
+  embeddingVector Json?
+
+  deadline  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  applications    Application[]
+  recommendations Recommendation[]
+
+  @@map("jobs")
+}
+
+model Application {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId  String
+  job    Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  status      ApplicationStatus @default(PENDING)
+  coverLetter String?
+  aiScore     Float? // AI score at time of application
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, jobId])
+  @@map("applications")
+}
+
+model Recommendation {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId  String
+  job    Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  // AI Scores
+  totalScore      Float
+  skillScore      Float
+  locationScore   Float
+  experienceScore Float
+  preferenceScore Float
+  segmentScore    Float
+
+  // Grade
+  grade      String @default("C")
+  gradeLabel String @default("Cukup Cocok")
+
+  // Explainability
+  reasons String[] @default([])
+
+  // Status
+  isViewed Boolean   @default(false)
+  viewedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, jobId])
+  @@map("recommendations")
+}
+
+model SkillGap {
+  id             String   @id @default(cuid())
+  userId         String
+  targetJobTitle String
+  missingSkills  String[]
+  recommendations String[]
+  createdAt      DateTime @default(now())
+
+  @@map("skill_gaps")
+}
+
+model Training {
+  id       String    @id @default(cuid())
+  title    String
+  provider String
+  url      String?
+  skills   String[]
+  segments Segment[]
+  duration String?
+  isFree   Boolean   @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("trainings")
+}
